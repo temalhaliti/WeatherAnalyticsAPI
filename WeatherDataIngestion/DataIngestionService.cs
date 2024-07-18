@@ -3,42 +3,30 @@ using DotPulsar.Abstractions;
 using DotPulsar.Extensions;
 using Microsoft.Extensions.Options;
 using System;
-using System.Buffers;
 using System.Threading.Tasks;
 
-namespace WeatherAnalytics
+namespace WeatherDataIngestion
 {
     public class DataIngestionService
     {
         private readonly IPulsarClient _client;
         private readonly string _topic;
-        private readonly string _subscriptionName;
 
-        public DataIngestionService(IOptions<PulsarSettings> settings)
+        public DataIngestionService(IOptions<PulsarSettings> pulsarSettings)
         {
             _client = PulsarClient.Builder()
-                .ServiceUrl(new Uri(settings.Value.ServiceUrl))
+                .ServiceUrl(new Uri(pulsarSettings.Value.ServiceUrl))
                 .Build();
-            _topic = settings.Value.Topic;
-            _subscriptionName = settings.Value.SubscriptionName;
+            _topic = pulsarSettings.Value.Topic;
         }
 
         public async Task IngestDataAsync()
         {
-            var consumer = _client.NewConsumer()
-                .Topic(_topic)
-                .SubscriptionName(_subscriptionName)
-                .Create();
+            var producer = _client.NewProducer().Topic(_topic).Create();
+            var data = new { Temperature = "25.3", Timestamp = DateTime.UtcNow };
+            var message = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(data);
 
-            var producer = _client.NewProducer()
-                .Topic("persistent://public/default/weather")
-                .Create();
-
-            await foreach (var message in consumer.Messages())
-            {
-                await producer.Send(message.Data);
-                await consumer.Acknowledge(message);
-            }
+            await producer.Send(message);
         }
     }
 

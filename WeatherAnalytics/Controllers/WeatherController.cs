@@ -1,23 +1,30 @@
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
-using WeatherAnalytics;
 
-[ApiController]
-[Route("[controller]")]
-public class WeatherController : ControllerBase
+namespace WeatherAnalytics.Controllers
 {
-    private readonly PulsarProducer _producer;
-
-    public WeatherController(PulsarProducer producer)
+    [ApiController]
+    [Route("[controller]")]
+    public class WeatherController : ControllerBase
     {
-        _producer = producer;
+        private readonly PulsarProducer _pulsarProducer;
+
+        public WeatherController(PulsarProducer pulsarProducer)
+        {
+            _pulsarProducer = pulsarProducer;
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Post([FromBody] WeatherData weatherData)
+        {
+            var message = Newtonsoft.Json.JsonConvert.SerializeObject(weatherData);
+            await _pulsarProducer.SendMessageAsync(message);
+            return Ok();
+        }
     }
 
-    [HttpPost]
-    public async Task<IActionResult> Post([FromBody] WeatherData data)
+    public class WeatherData
     {
-        var message = JsonConvert.SerializeObject(data);
-        await _producer.SendMessageAsync(message);
-        return Ok();
+        public string Temperature { get; set; }
+        public DateTime Timestamp { get; set; }
     }
 }
