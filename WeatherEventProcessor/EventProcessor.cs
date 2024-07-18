@@ -14,7 +14,8 @@ namespace WeatherAnalytics
     public class EventProcessor
     {
         private readonly IPulsarClient _client;
-        private readonly string _topic;
+        private readonly string _inputTopic;
+        private readonly string _outputTopic;
         private readonly string _subscriptionName;
         private readonly ElasticClient _elasticClient;
 
@@ -23,7 +24,8 @@ namespace WeatherAnalytics
             _client = PulsarClient.Builder()
                 .ServiceUrl(new Uri(pulsarSettings.Value.ServiceUrl))
                 .Build();
-            _topic = pulsarSettings.Value.Topic;
+            _inputTopic = pulsarSettings.Value.Topic;
+            _outputTopic = pulsarSettings.Value.ProcessedTopic;
             _subscriptionName = pulsarSettings.Value.SubscriptionName;
 
             var settings = new ConnectionSettings(new Uri(elasticSettings.Value.Url))
@@ -34,9 +36,13 @@ namespace WeatherAnalytics
         public async Task ProcessEventsAsync()
         {
             var consumer = _client.NewConsumer()
-                .Topic(_topic)
+                .Topic(_inputTopic)
                 .SubscriptionName(_subscriptionName)
                 .SubscriptionType(SubscriptionType.Shared)
+                .Create();
+
+            var producer = _client.NewProducer()
+                .Topic(_outputTopic)
                 .Create();
 
             Console.WriteLine("Event Processor started. Press any key to exit...");
@@ -53,9 +59,15 @@ namespace WeatherAnalytics
 
                 Console.WriteLine($"Indexed data in Elasticsearch: {JsonConvert.SerializeObject(weatherData)}");
 
+                // Produce enriched data to the output topic
+                var enrichedMessage = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(weatherData));
+                await producer.Send(new ReadOnlySequence<byte>(enrichedMessage));
+
                 await consumer.Acknowledge(message);
-                Console.WriteLine($"Consumed and acknowledged message: {JsonConvert.SerializeObject(weatherData)}");
+                Console.WriteLine($"Consumed, enriched, and produced message: {JsonConvert.SerializeObject(weatherData)}");
             }
+
+            Console.ReadKey();
         }
     }
 
@@ -63,6 +75,7 @@ namespace WeatherAnalytics
     {
         public string ServiceUrl { get; set; }
         public string Topic { get; set; }
+        public string ProcessedTopic { get; set; }
         public string SubscriptionName { get; set; }
     }
 
