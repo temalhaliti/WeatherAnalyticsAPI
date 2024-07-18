@@ -36,7 +36,10 @@ namespace WeatherAnalytics
             var consumer = _client.NewConsumer()
                 .Topic(_topic)
                 .SubscriptionName(_subscriptionName)
+                .SubscriptionType(SubscriptionType.Shared)
                 .Create();
+
+            Console.WriteLine("Event Processor started. Press any key to exit...");
 
             await foreach (var message in consumer.Messages())
             {
@@ -48,7 +51,10 @@ namespace WeatherAnalytics
                 // Index data in Elasticsearch
                 await _elasticClient.IndexDocumentAsync(weatherData);
 
+                Console.WriteLine($"Indexed data in Elasticsearch: {JsonConvert.SerializeObject(weatherData)}");
+
                 await consumer.Acknowledge(message);
+                Console.WriteLine($"Consumed and acknowledged message: {JsonConvert.SerializeObject(weatherData)}");
             }
         }
     }
