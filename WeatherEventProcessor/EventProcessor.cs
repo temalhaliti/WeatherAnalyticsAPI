@@ -53,6 +53,8 @@ namespace WeatherAnalytics
 
                 // Enrich and process data
                 weatherData.ProcessedTimestamp = DateTime.UtcNow;
+                weatherData.Description = $"The temperature is {weatherData.Temperature}°C";
+                weatherData.FormattedTimestamp = weatherData.Timestamp.ToString("F");
 
                 // Index data in Elasticsearch
                 await _elasticClient.IndexDocumentAsync(weatherData);
@@ -92,5 +94,7 @@ namespace WeatherAnalytics
         public string Temperature { get; set; }
         public DateTime Timestamp { get; set; }
         public DateTime ProcessedTimestamp { get; set; }
+        public string Description { get; set; }
+        public string FormattedTimestamp { get; set; }
     }
 }
