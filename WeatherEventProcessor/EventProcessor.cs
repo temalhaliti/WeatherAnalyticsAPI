@@ -53,25 +53,24 @@ namespace WeatherAnalytics
 
                 // Enrich and process data
                 weatherData.ProcessedTimestamp = DateTime.UtcNow;
-                var temperatureCelsius = Convert.ToDouble(weatherData.Temperature);
-                var temperatureFahrenheit = (temperatureCelsius * 9 / 5) + 32;
-
-                weatherData.Description = $"Temperature: {weatherData.Temperature}°C / {temperatureFahrenheit:F1}°F";
-                weatherData.FormattedTimestamp = weatherData.Timestamp.ToString("f"); // Full date/time pattern (short time)
+                double temperatureCelsius = double.Parse(weatherData.Temperature);
+                double temperatureFahrenheit = (temperatureCelsius * 9 / 5) + 32;
+                weatherData.Description = $"Temperature: {temperatureCelsius}°C\nTemperature: {temperatureFahrenheit}°F\nTimestamp: {weatherData.Timestamp:F}";
+                weatherData.FormattedTimestamp = weatherData.Timestamp.ToString("F");
 
                 // Index data in Elasticsearch
                 await _elasticClient.IndexDocumentAsync(weatherData);
 
-                Console.WriteLine($"Indexed data in Elasticsearch:\n{JsonConvert.SerializeObject(weatherData, Formatting.Indented)}");
+                Console.WriteLine($"Indexed data in Elasticsearch: {JsonConvert.SerializeObject(weatherData)}");
 
                 // Produce enriched data to the output topic
                 var enrichedMessage = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(weatherData));
                 await producer.Send(new ReadOnlySequence<byte>(enrichedMessage));
 
-                Console.WriteLine($"Produced enriched message to output topic:\n{JsonConvert.SerializeObject(weatherData, Formatting.Indented)}");
+                Console.WriteLine($"Produced enriched message to output topic: {JsonConvert.SerializeObject(weatherData)}");
 
                 await consumer.Acknowledge(message);
-                Console.WriteLine($"Acknowledged message:\n{JsonConvert.SerializeObject(weatherData, Formatting.Indented)}");
+                Console.WriteLine($"Acknowledged message: {JsonConvert.SerializeObject(weatherData)}");
             }
 
             Console.ReadKey();
