@@ -63,8 +63,10 @@ namespace WeatherAnalytics
                 var enrichedMessage = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(weatherData));
                 await producer.Send(new ReadOnlySequence<byte>(enrichedMessage));
 
+                Console.WriteLine($"Produced enriched message to output topic: {JsonConvert.SerializeObject(weatherData)}");
+
                 await consumer.Acknowledge(message);
-                Console.WriteLine($"Consumed, enriched, and produced message: {JsonConvert.SerializeObject(weatherData)}");
+                Console.WriteLine($"Acknowledged message: {JsonConvert.SerializeObject(weatherData)}");
             }
 
             Console.ReadKey();
